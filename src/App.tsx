@@ -8,9 +8,11 @@ import { MedicalAndFamily } from './components/MedicalAndFamily';
 import { EmergencyDirectory } from './components/EmergencyDirectory';
 import { ShopAndWallet } from './components/ShopAndWallet';
 import { AdminDashboard } from './components/AdminDashboard';
+import { CompleteProfileOnboarding } from './components/CompleteProfileOnboarding';
 import { subscribeToActiveSOSAlerts } from './services/firestoreService';
 
 function AppContent() {
+  const { userProfile, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('sos');
   const [activeScanQrId, setActiveScanQrId] = useState<string | null>(null);
   const [activeSOSCount, setActiveSOSCount] = useState<number>(0);
@@ -39,6 +41,13 @@ function AppContent() {
     setActiveTab('scanner');
   };
 
+  const isPublicScanner = activeTab === 'scanner' && Boolean(activeScanQrId);
+  const needsProfileOnboarding =
+    !isPublicScanner &&
+    !loading &&
+    Boolean(userProfile) &&
+    userProfile?.profileCompleted !== true;
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col justify-between">
       <div>
@@ -49,37 +58,43 @@ function AppContent() {
         />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {activeTab === 'scanner' && activeScanQrId && (
-            <QRScanPage
-              qrId={activeScanQrId}
-              onBack={() => {
-                setActiveScanQrId(null);
-                setActiveTab('qr');
-              }}
-            />
-          )}
+          {needsProfileOnboarding ? (
+            <CompleteProfileOnboarding />
+          ) : (
+            <>
+              {activeTab === 'scanner' && activeScanQrId && (
+                <QRScanPage
+                  qrId={activeScanQrId}
+                  onBack={() => {
+                    setActiveScanQrId(null);
+                    setActiveTab('qr');
+                  }}
+                />
+              )}
 
-          {activeTab === 'scanner' && !activeScanQrId && (
-            <div className="max-w-md mx-auto bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-4 shadow-xl">
-              <h3 className="text-xl font-bold text-slate-900">Scan Emergency QR Tag</h3>
-              <p className="text-xs text-slate-600">
-                To test public emergency QR scanning, click "View Public Scan" on any created QR tag in the "QR Tags" tab.
-              </p>
-              <button
-                onClick={() => setActiveTab('qr')}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs shadow-md"
-              >
-                Go to QR Tags List
-              </button>
-            </div>
-          )}
+              {activeTab === 'scanner' && !activeScanQrId && (
+                <div className="max-w-md mx-auto bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-4 shadow-xl">
+                  <h3 className="text-xl font-bold text-slate-900">Scan Emergency QR Tag</h3>
+                  <p className="text-xs text-slate-600">
+                    To test public emergency QR scanning, click "View Public Scan" on any created QR tag in the "QR Tags" tab.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('qr')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs shadow-md"
+                  >
+                    Go to QR Tags List
+                  </button>
+                </div>
+              )}
 
-          {activeTab === 'sos' && <SOSModule />}
-          {activeTab === 'qr' && <QRManagement onScanQR={handleOpenScanner} />}
-          {activeTab === 'medical' && <MedicalAndFamily />}
-          {activeTab === 'directory' && <EmergencyDirectory />}
-          {activeTab === 'shop' && <ShopAndWallet />}
-          {activeTab === 'admin' && <AdminDashboard />}
+              {activeTab === 'sos' && <SOSModule />}
+              {activeTab === 'qr' && <QRManagement onScanQR={handleOpenScanner} />}
+              {activeTab === 'medical' && <MedicalAndFamily />}
+              {activeTab === 'directory' && <EmergencyDirectory />}
+              {activeTab === 'shop' && <ShopAndWallet />}
+              {activeTab === 'admin' && <AdminDashboard />}
+            </>
+          )}
         </main>
       </div>
 

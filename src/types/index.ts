@@ -10,9 +10,11 @@ export interface UserProfile {
   dob?: string;
   address?: string;
   city?: string;
+  district?: string;
   state?: string;
   pincode?: string;
   role: UserRole;
+  profileCompleted?: boolean;
   createdAt: string;
 }
 

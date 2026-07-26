@@ -18,6 +18,7 @@ interface AuthContextType {
   demoSignIn: (role?: UserRole, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateRole: (role: UserRole) => Promise<void>;
+  completeUserProfile: (updated: UserProfile) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,12 +44,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             uid: firebaseUser.uid,
             fullName: firebaseUser.displayName || 'Emergency User',
             email: firebaseUser.email || 'user@safelife.in',
-            phone: firebaseUser.phoneNumber || '+91 98765 43210',
+            phone: firebaseUser.phoneNumber || '',
             bloodGroup: 'O+',
             city: 'New Delhi',
             state: 'Delhi',
             pincode: '110001',
             role: 'Customer',
+            profileCompleted: false,
             createdAt: new Date().toISOString(),
           };
           try {
@@ -77,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             state: 'Delhi',
             pincode: '110001',
             role: 'Customer',
+            profileCompleted: false,
             createdAt: new Date().toISOString(),
           };
           setUserProfile(demoProfile);
@@ -132,6 +135,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const completeUserProfile = async (updated: UserProfile) => {
+    const finalProfile: UserProfile = {
+      ...updated,
+      profileCompleted: true,
+    };
+    setUserProfile(finalProfile);
+    await UserService.saveProfile(finalProfile);
+  };
+
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
@@ -152,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         demoSignIn,
         signOut,
         updateRole,
+        completeUserProfile,
       }}
     >
       {children}
