@@ -1,5 +1,6 @@
 import { QRCodeTag } from '../types';
 import { qrRepository } from '../repositories';
+import { subscribeToAllQRTags } from './firestoreService';
 
 export class QRService {
   static async getTag(qrId: string): Promise<QRCodeTag | null> {
@@ -11,6 +12,12 @@ export class QRService {
     callback: (tags: QRCodeTag[]) => void
   ): () => void {
     return qrRepository.subscribeToUserQRTags(userId, callback);
+  }
+
+  static subscribeAllTags(
+    callback: (tags: QRCodeTag[]) => void
+  ): () => void {
+    return subscribeToAllQRTags(callback);
   }
 
   static async saveTag(tag: QRCodeTag): Promise<void> {

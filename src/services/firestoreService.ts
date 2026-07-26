@@ -17,12 +17,14 @@ import {
 import { db, auth } from '../lib/firebase';
 import {
   UserProfile,
+  UserRole,
   EmergencyContact,
   MedicalProfile,
   QRCodeTag,
   SOSAlert,
   ProductOrder,
-  WalletTransaction
+  WalletTransaction,
+  UserWallet
 } from '../types';
 
 export enum OperationType {
@@ -82,9 +84,56 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
   const path = `users/${profile.uid}`;
   try {
-    await setDoc(doc(db, 'users', profile.uid), profile, { merge: true });
+    const dataToSave = {
+      ...profile,
+      accountStatus: profile.accountStatus || 'ACTIVE',
+    };
+    await setDoc(doc(db, 'users', profile.uid), dataToSave, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export function subscribeToAllUsers(callback: (users: UserProfile[]) => void): () => void {
+  const path = 'users';
+  try {
+    const q = query(collection(db, 'users'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const users = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as UserProfile;
+          return {
+            ...data,
+            uid: docSnap.id,
+            accountStatus: data.accountStatus || 'ACTIVE',
+          };
+        });
+        callback(users);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+}
+
+export async function updateUserRoleAndStatus(
+  userId: string,
+  role: UserRole,
+  accountStatus: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+): Promise<void> {
+  const path = `users/${userId}`;
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      role,
+      accountStatus,
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
   }
 }
 
@@ -175,6 +224,31 @@ export function subscribeToUserQRCodes(
       collection(db, 'qr_codes'),
       where('userId', '==', userId)
     );
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const tags = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        })) as QRCodeTag[];
+        callback(tags);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, path);
+      }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+}
+
+export function subscribeToAllQRTags(
+  callback: (tags: QRCodeTag[]) => void
+) {
+  const path = 'qr_codes';
+  try {
+    const q = query(collection(db, 'qr_codes'));
     return onSnapshot(
       q,
       (snapshot) => {
@@ -389,5 +463,34 @@ export async function addWalletTransaction(trans: WalletTransaction): Promise<vo
     await setDoc(doc(db, 'wallet_transactions', trans.id), trans);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function getOrCreateUserWallet(userId: string): Promise<UserWallet> {
+  const path = `wallets/${userId}`;
+  try {
+    const docRef = doc(db, 'wallets', userId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return snap.data() as UserWallet;
+    }
+    const initialWallet: UserWallet = {
+      userId,
+      balance: 100, // ₹100 Emergency Safety Credit
+      loyaltyPoints: 50,
+      currency: 'INR',
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(docRef, initialWallet);
+    return initialWallet;
+  } catch (error) {
+    console.warn('Wallet creation note:', error);
+    return {
+      userId,
+      balance: 100,
+      loyaltyPoints: 50,
+      currency: 'INR',
+      updatedAt: new Date().toISOString(),
+    };
   }
 }

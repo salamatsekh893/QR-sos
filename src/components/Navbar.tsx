@@ -35,14 +35,55 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { userProfile, signInWithGoogle, signOut, updateRole } = useAuth();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const navItems = [
-    { id: 'sos', label: 'Live Emergency SOS', icon: ShieldAlert, badge: activeSOSCount, desc: 'Instant panic alert & GPS broadcast' },
-    { id: 'qr', label: 'Emergency QR Tags', icon: QrCode, desc: 'Scannable vehicle & helmet tags' },
-    { id: 'medical', label: 'Medical & Family Profile', icon: HeartPulse, desc: 'Blood group, allergies & contacts' },
-    { id: 'directory', label: 'Helpline Directory', icon: PhoneCall, desc: '24/7 National police, hospital & rescue' },
-    { id: 'shop', label: 'Safety Shop & Wallet', icon: ShoppingBag, desc: 'Buy QR stickers & cashback wallet' },
-    { id: 'admin', label: 'Responders & Analytics', icon: Activity, desc: 'Enterprise live case dispatch feed' },
-  ];
+  const role = userProfile?.role || 'Customer';
+
+  const getNavItems = () => {
+    if (role === 'Customer') {
+      return [
+        { id: 'sos', label: 'Live Emergency SOS', icon: ShieldAlert, badge: activeSOSCount, desc: 'Instant panic alert & GPS broadcast' },
+        { id: 'qr', label: 'My QR Codes', icon: QrCode, desc: 'Scannable vehicle & helmet tags' },
+        { id: 'medical', label: 'Medical & Family', icon: HeartPulse, desc: 'Blood group, allergies & contacts' },
+        { id: 'directory', label: 'Helpline Directory', icon: PhoneCall, desc: '24/7 National police, hospital & rescue' },
+        { id: 'shop', label: 'Safety Shop', icon: ShoppingBag, desc: 'Buy QR stickers & cashback wallet' },
+      ];
+    }
+    if (role === 'Super Admin') {
+      return [
+        { id: 'admin', label: 'Admin Command', icon: Activity, desc: 'Super Admin full platform control' },
+        { id: 'sos', label: 'Live SOS', icon: ShieldAlert, badge: activeSOSCount, desc: 'Live distress monitoring' },
+        { id: 'qr', label: 'QR Management', icon: QrCode, desc: 'System-wide QR tags' },
+        { id: 'directory', label: 'Helpline Directory', icon: PhoneCall, desc: 'Helplines' },
+        { id: 'shop', label: 'Safety Shop', icon: ShoppingBag, desc: 'Orders & Payments' },
+      ];
+    }
+    if (role === 'Emergency Responder') {
+      return [
+        { id: 'responder', label: 'Responders Console', icon: Activity, badge: activeSOSCount, desc: 'Live emergency dispatch feed' },
+        { id: 'sos', label: 'Live SOS', icon: ShieldAlert, desc: 'Emergency signals' },
+        { id: 'directory', label: 'Helplines', icon: PhoneCall, desc: 'Emergency contacts' },
+      ];
+    }
+    if (role === 'Distributor') {
+      return [
+        { id: 'distributor', label: 'Distributor Portal', icon: Building2, desc: 'QR stock & commissions' },
+        { id: 'shop', label: 'Safety Shop', icon: ShoppingBag, desc: 'Products' },
+        { id: 'directory', label: 'Helplines', icon: PhoneCall, desc: 'Helplines' },
+      ];
+    }
+    if (role === 'Branch Admin') {
+      return [
+        { id: 'branch', label: 'District Branch', icon: Building2, desc: 'Regional branch command' },
+        { id: 'sos', label: 'Live SOS', icon: ShieldAlert, desc: 'Emergency signals' },
+        { id: 'directory', label: 'Helplines', icon: PhoneCall, desc: 'Helplines' },
+      ];
+    }
+    return [
+      { id: 'sos', label: 'Live Emergency SOS', icon: ShieldAlert, badge: activeSOSCount, desc: 'Instant panic alert' },
+      { id: 'directory', label: 'Helpline Directory', icon: PhoneCall, desc: '24/7 Helplines' },
+    ];
+  };
+
+  const navItems = getNavItems();
 
   const handleSelectTab = (id: string) => {
     setActiveTab(id);
@@ -239,25 +280,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   </div>
 
-                  {/* Role Switcher inside Drawer */}
-                  <div className="pt-2 border-t border-blue-800/80">
-                    <div className="text-[11px] font-bold text-blue-300 mb-1.5">Switch App Role:</div>
-                    <div className="grid grid-cols-3 gap-1 bg-blue-950 p-1 rounded-xl border border-blue-800">
-                      {(['Customer', 'Super Admin', 'Emergency Responder'] as UserRole[]).map((r) => (
-                        <button
-                          key={r}
-                          onClick={() => updateRole(r)}
-                          className={`py-1 rounded-lg text-[10px] font-extrabold transition truncate px-1 ${
-                            userProfile.role === r
-                              ? 'bg-yellow-400 text-slate-950 shadow'
-                              : 'text-blue-200 hover:text-white'
-                          }`}
-                        >
-                          {r.split(' ')[0]}
-                        </button>
-                      ))}
+                  {/* Role Switcher inside Drawer - Only accessible for Super Admin */}
+                  {userProfile.role === 'Super Admin' && (
+                    <div className="pt-2 border-t border-blue-800/80">
+                      <div className="text-[11px] font-bold text-blue-300 mb-1.5">Switch Operational Role (Super Admin):</div>
+                      <div className="grid grid-cols-2 gap-1 bg-blue-950 p-1 rounded-xl border border-blue-800">
+                        {(['Customer', 'Super Admin', 'Emergency Responder', 'Distributor', 'Branch Admin'] as UserRole[]).map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => updateRole(r)}
+                            className={`py-1 rounded-lg text-[10px] font-extrabold transition truncate px-1 ${
+                              userProfile.role === r
+                                ? 'bg-yellow-400 text-slate-950 shadow'
+                                : 'text-blue-200 hover:text-white'
+                            }`}
+                          >
+                            {r}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-2 space-y-2">

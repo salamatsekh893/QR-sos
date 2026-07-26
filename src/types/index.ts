@@ -1,4 +1,6 @@
-export type UserRole = 'Customer' | 'Super Admin' | 'Distributor' | 'Emergency Responder';
+export type UserRole = 'Customer' | 'Super Admin' | 'Distributor' | 'Emergency Responder' | 'Branch Admin';
+
+export type AccountStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 
 export interface UserProfile {
   uid: string;
@@ -14,6 +16,7 @@ export interface UserProfile {
   state?: string;
   pincode?: string;
   role: UserRole;
+  accountStatus?: AccountStatus;
   profileCompleted?: boolean;
   createdAt: string;
 }
@@ -114,6 +117,14 @@ export interface WalletTransaction {
   type: 'CREDIT' | 'DEBIT' | 'COMMISSION';
   description: string;
   createdAt: string;
+}
+
+export interface UserWallet {
+  userId: string;
+  balance: number;
+  loyaltyPoints: number;
+  currency: string;
+  updatedAt: string;
 }
 
 export interface EmergencyDirectoryItem {

@@ -2,20 +2,25 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   onAuthStateChanged,
   signInWithPopup,
-  signInAnonymously,
   signOut as firebaseSignOut,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
   User
 } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db, googleProvider } from '../lib/firebase';
 import { UserProfile, UserRole } from '../types';
 import { UserService } from '../services/UserService';
+import { getOrCreateUserWallet } from '../services/firestoreService';
 
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
-  demoSignIn: (role?: UserRole, name?: string) => Promise<void>;
+  signInWithPhone: (phoneNumber: string, recaptchaContainerId: string) => Promise<ConfirmationResult | null>;
+  confirmOTP: (confirmationResult: ConfirmationResult, code: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateRole: (role: UserRole) => Promise<void>;
   completeUserProfile: (updated: UserProfile) => Promise<void>;
@@ -29,66 +34,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unSubDoc: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (unSubDoc) {
+        unSubDoc();
+        unSubDoc = null;
+      }
+
       if (firebaseUser) {
         setUser(firebaseUser);
         let profile: UserProfile | null = null;
         try {
           profile = await UserService.getProfile(firebaseUser.uid);
         } catch (e) {
-          console.warn('Error fetching profile, creating fallback:', e);
+          console.warn('Error fetching profile from Firestore:', e);
         }
 
+        // If user document doesn't exist in Firestore, create User, Profile, Wallet, with Role = Customer
         if (!profile) {
+          const cleanPhone = firebaseUser.phoneNumber || '';
           profile = {
             uid: firebaseUser.uid,
-            fullName: firebaseUser.displayName || 'Emergency User',
-            email: firebaseUser.email || 'user@safelife.in',
-            phone: firebaseUser.phoneNumber || '',
+            fullName: firebaseUser.displayName || 'Safe Life User',
+            email: firebaseUser.email || (cleanPhone ? `${cleanPhone.replace(/\D/g, '')}@safelife.in` : ''),
+            phone: cleanPhone,
             bloodGroup: 'O+',
             city: 'New Delhi',
             state: 'Delhi',
             pincode: '110001',
-            role: 'Customer',
-            profileCompleted: false,
+            role: 'Customer', // MANDATORY DEFAULT: Customer
+            accountStatus: 'ACTIVE',
+            profileCompleted: false, // Triggers Onboarding Wizard for new user
             createdAt: new Date().toISOString(),
           };
           try {
             await UserService.saveProfile(profile);
+            await getOrCreateUserWallet(firebaseUser.uid);
           } catch (e) {
-            console.warn('Error saving initial profile:', e);
+            console.warn('Error creating user profile & wallet:', e);
+          }
+        } else {
+          // Ensure wallet exists
+          try {
+            await getOrCreateUserWallet(firebaseUser.uid);
+          } catch (e) {
+            console.warn('Wallet check note:', e);
           }
         }
+
         setUserProfile(profile);
         setLoading(false);
+
+        // Real-time Firestore snapshot listener for profile changes (role, status, profile details)
+        unSubDoc = onSnapshot(
+          doc(db, 'users', firebaseUser.uid),
+          (snapshot) => {
+            if (snapshot.exists()) {
+              const liveData = snapshot.data() as UserProfile;
+              setUserProfile({
+                ...liveData,
+                accountStatus: liveData.accountStatus || 'ACTIVE',
+              });
+            }
+          },
+          (err) => {
+            console.warn('User profile live snapshot error:', err);
+          }
+        );
       } else {
-        // Sign in anonymously for seamless immediate demo experience with Firebase Auth credentials
-        try {
-          await signInAnonymously(auth);
-        } catch (err) {
-          console.warn('Anonymous sign-in error, using local fallback:', err);
-          // Fallback if anonymous auth fails
-          const fallbackUid = 'demo_user_101';
-          const demoProfile: UserProfile = {
-            uid: fallbackUid,
-            fullName: 'Rajesh Kumar',
-            email: 'rajesh.k@safelife.in',
-            phone: '+91 98765 12345',
-            bloodGroup: 'B+',
-            city: 'New Delhi',
-            state: 'Delhi',
-            pincode: '110001',
-            role: 'Customer',
-            profileCompleted: false,
-            createdAt: new Date().toISOString(),
-          };
-          setUserProfile(demoProfile);
-          setLoading(false);
-        }
+        // Unauthenticated user
+        setUser(null);
+        setUserProfile(null);
+        setLoading(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unSubDoc) unSubDoc();
+    };
   }, []);
 
   const signInWithGoogle = async () => {
@@ -98,33 +123,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('Google Sign-In Error:', err);
       setLoading(false);
+      throw err;
     }
   };
 
-  const demoSignIn = async (role: UserRole = 'Customer', name: string = 'Demo User') => {
-    const uid = user?.uid || `user_${Date.now().toString().slice(-6)}`;
-    const profile: UserProfile = {
-      uid,
-      fullName: name,
-      email: `${name.toLowerCase().replace(/\s+/g, '')}@safelife.in`,
-      phone: '+91 98765 99999',
-      bloodGroup: 'AB+',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      pincode: '400001',
-      role,
-      createdAt: new Date().toISOString(),
-    };
-    setUserProfile(profile);
+  const signInWithPhone = async (phoneNumber: string, recaptchaContainerId: string): Promise<ConfirmationResult | null> => {
     try {
-      await UserService.saveProfile(profile);
-    } catch (e) {
-      console.warn('Demo profile save note:', e);
+      if (!(window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainerId, {
+          size: 'invisible',
+        });
+      }
+      const appVerifier = (window as any).recaptchaVerifier;
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      return confirmationResult;
+    } catch (err) {
+      console.warn('Recaptcha / Phone Auth error:', err);
+      throw err;
+    }
+  };
+
+  const confirmOTP = async (confirmationResult: ConfirmationResult, code: string) => {
+    setLoading(true);
+    try {
+      await confirmationResult.confirm(code);
+    } catch (err) {
+      setLoading(false);
+      throw err;
     }
   };
 
   const updateRole = async (newRole: UserRole) => {
-    if (userProfile) {
+    // Only Super Admin can change roles in the platform
+    if (userProfile && userProfile.role === 'Super Admin') {
       const updated = { ...userProfile, role: newRole };
       setUserProfile(updated);
       try {
@@ -132,12 +163,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (e) {
         console.warn('Role update note:', e);
       }
+    } else {
+      console.warn('Customers and unauthorized roles cannot switch roles.');
     }
   };
 
   const completeUserProfile = async (updated: UserProfile) => {
     const finalProfile: UserProfile = {
       ...updated,
+      role: userProfile?.role || 'Customer', // Preserve assigned role, default Customer
       profileCompleted: true,
     };
     setUserProfile(finalProfile);
@@ -147,10 +181,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
+    } catch (err) {
+      console.warn('Sign Out Note:', err);
+    } finally {
       setUser(null);
       setUserProfile(null);
-    } catch (err) {
-      console.error('Sign Out Error:', err);
     }
   };
 
@@ -161,7 +196,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userProfile,
         loading,
         signInWithGoogle,
-        demoSignIn,
+        signInWithPhone,
+        confirmOTP,
         signOut,
         updateRole,
         completeUserProfile,
