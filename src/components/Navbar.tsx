@@ -63,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div className="hidden sm:flex items-center space-x-4 shrink-0">
             <span>Helpline: <strong className="text-yellow-300">112</strong> / <strong className="text-yellow-300">108</strong></span>
-            <span className="opacity-90 bg-yellow-400 text-slate-900 font-black px-2 py-0.5 rounded text-[10px]">Flipkart Inspired Edition</span>
+            <span className="opacity-90 bg-yellow-400 text-slate-900 font-black px-2 py-0.5 rounded text-[10px]">National Emergency Portal</span>
           </div>
         </div>
 
