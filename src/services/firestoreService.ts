@@ -293,6 +293,27 @@ export async function resolveSOSAlert(alertId: string): Promise<void> {
   }
 }
 
+export async function updateSOSAlertStatus(
+  alertId: string,
+  status: 'ACTIVE' | 'DISPATCHED' | 'RESOLVED',
+  responderNotes?: string
+): Promise<void> {
+  const path = `sos_alerts/${alertId}`;
+  try {
+    const docRef = doc(db, 'sos_alerts', alertId);
+    const updateData: any = { status };
+    if (status === 'RESOLVED') {
+      updateData.resolvedAt = new Date().toISOString();
+    }
+    if (responderNotes) {
+      updateData.responderNotes = responderNotes;
+    }
+    await updateDoc(docRef, updateData);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
 // ================= ORDERS & TRANSACTIONS =================
 
 export function subscribeToUserOrders(

@@ -80,6 +80,8 @@ export interface SOSAlert {
   batteryLevel?: number;
   createdAt: string;
   resolvedAt?: string;
+  responderNotes?: string;
+  responderName?: string;
 }
 
 export interface ProductItem {

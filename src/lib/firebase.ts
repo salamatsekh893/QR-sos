@@ -10,13 +10,13 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Test connection on boot as mandated by Firebase skill
+// Test connection on boot gracefully
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase client offline or initializing:', error.message);
+    if (error instanceof Error) {
+      console.info('Firestore network status check:', error.message);
     }
   }
 }
