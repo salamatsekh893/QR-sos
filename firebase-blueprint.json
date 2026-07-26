@@ -1,0 +1,160 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "bloodGroup": { "type": "string" },
+        "gender": { "type": "string" },
+        "dob": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "pincode": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "fullName", "email"]
+    },
+    "EmergencyContact": {
+      "title": "EmergencyContact",
+      "description": "Emergency contact linked to user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "relationship": { "type": "string" },
+        "phone": { "type": "string" },
+        "priority": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["userId", "name", "phone", "relationship"]
+    },
+    "MedicalProfile": {
+      "title": "MedicalProfile",
+      "description": "User medical and health details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "bloodGroup": { "type": "string" },
+        "allergies": { "type": "string" },
+        "chronicDiseases": { "type": "string" },
+        "currentMedications": { "type": "string" },
+        "doctorName": { "type": "string" },
+        "doctorPhone": { "type": "string" },
+        "hospitalName": { "type": "string" },
+        "insurancePolicyNo": { "type": "string" },
+        "organDonor": { "type": "boolean" },
+        "emergencyNotes": { "type": "string" }
+      },
+      "required": ["userId", "bloodGroup"]
+    },
+    "QRCode": {
+      "title": "QRCode",
+      "description": "Emergency QR code tag identity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "qrType": { "type": "string" },
+        "code": { "type": "string" },
+        "assignedName": { "type": "string" },
+        "bloodGroup": { "type": "string" },
+        "emergencyPhone": { "type": "string" },
+        "vehicleNo": { "type": "string" },
+        "notes": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "scansCount": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "qrType", "code"]
+    },
+    "SOSAlert": {
+      "title": "SOSAlert",
+      "description": "Emergency SOS alert signal with live location",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "address": { "type": "string" },
+        "status": { "type": "string" },
+        "alertType": { "type": "string" },
+        "batteryLevel": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "resolvedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "status", "latitude", "longitude"]
+    },
+    "ProductOrder": {
+      "title": "ProductOrder",
+      "description": "Order for physical QR tags/cards",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string" },
+        "shippingAddress": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "productName", "totalAmount"]
+    },
+    "WalletTransaction": {
+      "title": "WalletTransaction",
+      "description": "Wallet and referral commission history",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "amount", "type"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles collection"
+    },
+    "/emergency_contacts/{contactId}": {
+      "schema": { "$ref": "#/entities/EmergencyContact" },
+      "description": "Emergency contacts collection"
+    },
+    "/medical_profiles/{userId}": {
+      "schema": { "$ref": "#/entities/MedicalProfile" },
+      "description": "Medical profile documents keyed by userId"
+    },
+    "/qr_codes/{qrId}": {
+      "schema": { "$ref": "#/entities/QRCode" },
+      "description": "QR identity tags collection"
+    },
+    "/sos_alerts/{alertId}": {
+      "schema": { "$ref": "#/entities/SOSAlert" },
+      "description": "Active and past SOS emergency alerts"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/ProductOrder" },
+      "description": "Customer product orders"
+    },
+    "/wallet_transactions/{transId}": {
+      "schema": { "$ref": "#/entities/WalletTransaction" },
+      "description": "Wallet transactions"
+    }
+  }
+}

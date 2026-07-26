@@ -1,0 +1,6 @@
+{
+  "name": "SAFE LIFE – Emergency QR & Personal Safety Platform",
+  "description": "Enterprise Emergency QR Safety Ecosystem featuring real-time Firestore database integration, Live SOS tracking, Dynamic Emergency QRs, Medical Profile, QR Products, Wallet & Admin Analytics.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
