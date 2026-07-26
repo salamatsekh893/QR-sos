@@ -17,11 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { SOSAlert } from '../types';
-import {
-  triggerSOSAlert,
-  resolveSOSAlert,
-  subscribeToActiveSOSAlerts
-} from '../services/firestoreService';
+import { SOSService } from '../services/SOSService';
 
 export const SOSModule: React.FC = () => {
   const { userProfile } = useAuth();
@@ -37,9 +33,9 @@ export const SOSModule: React.FC = () => {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const sirenIntervalRef = useRef<any>(null);
 
-  // Subscribe to real-time SOS alerts in Firestore
+  // Subscribe to real-time SOS alerts
   useEffect(() => {
-    const unsubscribe = subscribeToActiveSOSAlerts((alerts) => {
+    const unsubscribe = SOSService.subscribeActiveAlerts((alerts) => {
       setActiveAlerts(alerts);
     });
     return () => unsubscribe();
@@ -133,9 +129,9 @@ export const SOSModule: React.FC = () => {
     };
 
     try {
-      await triggerSOSAlert(newAlert);
+      await SOSService.triggerAlert(newAlert);
       setIsActivating(false);
-      setAlertSuccess(`🚨 LIVE SOS ALERT DISPATCHED TO EMERGENCY NETWORK & FIRESTORE!`);
+      setAlertSuccess(`🚨 LIVE SOS ALERT DISPATCHED TO EMERGENCY NETWORK!`);
       toggleSiren(); // Auto play siren
       setTimeout(() => setAlertSuccess(null), 8000);
     } catch (error) {
@@ -147,7 +143,7 @@ export const SOSModule: React.FC = () => {
   // Handle Resolution
   const handleResolve = async (alertId: string) => {
     try {
-      await resolveSOSAlert(alertId);
+      await SOSService.updateStatus(alertId, 'RESOLVED', 'Resolved by user.');
     } catch (err) {
       console.error('Resolve SOS Error:', err);
     }

@@ -13,12 +13,9 @@ import {
   FileText
 } from 'lucide-react';
 import { QRCodeTag, MedicalProfile } from '../types';
-import {
-  getQRCodeTag,
-  getMedicalProfile,
-  incrementQRScan,
-  triggerSOSAlert
-} from '../services/firestoreService';
+import { QRService } from '../services/QRService';
+import { MedicalService } from '../services/MedicalService';
+import { SOSService } from '../services/SOSService';
 
 interface QRScanPageProps {
   qrId: string;
@@ -34,11 +31,14 @@ export const QRScanPage: React.FC<QRScanPageProps> = ({ qrId, onBack }) => {
   useEffect(() => {
     async function loadQRData() {
       setLoading(true);
-      const tagData = await getQRCodeTag(qrId);
+      const tagData = await QRService.getTag(qrId);
       if (tagData) {
         setTag(tagData);
-        incrementQRScan(qrId); // Increment scan counter on load
-        const medData = await getMedicalProfile(tagData.userId);
+        // Increment scan count if active tag
+        if (tagData.scansCount !== undefined) {
+          QRService.saveTag({ ...tagData, scansCount: tagData.scansCount + 1 });
+        }
+        const medData = await MedicalService.getProfile(tagData.userId);
         if (medData) {
           setMedical(medData);
         }
@@ -66,7 +66,7 @@ export const QRScanPage: React.FC<QRScanPageProps> = ({ qrId, onBack }) => {
           alertType: '1-Click SOS' as const,
           createdAt: new Date().toISOString(),
         };
-        await triggerSOSAlert(sosData);
+        await SOSService.triggerAlert(sosData);
       });
     }
   };

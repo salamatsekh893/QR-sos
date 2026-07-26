@@ -14,13 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { MedicalProfile, EmergencyContact } from '../types';
-import {
-  getMedicalProfile,
-  saveMedicalProfile,
-  subscribeToEmergencyContacts,
-  saveEmergencyContact,
-  deleteEmergencyContact
-} from '../services/firestoreService';
+import { MedicalService } from '../services/MedicalService';
 
 export const MedicalAndFamily: React.FC = () => {
   const { userProfile } = useAuth();
@@ -50,7 +44,7 @@ export const MedicalAndFamily: React.FC = () => {
     if (!userProfile) return;
 
     // Load Medical Profile
-    getMedicalProfile(userProfile.uid).then((med) => {
+    MedicalService.getProfile(userProfile.uid).then((med) => {
       if (med) {
         setBloodGroup(med.bloodGroup || 'O+');
         setAllergies(med.allergies || '');
@@ -66,7 +60,7 @@ export const MedicalAndFamily: React.FC = () => {
     });
 
     // Subscribe to Emergency Contacts
-    const unsubscribe = subscribeToEmergencyContacts(userProfile.uid, (data) => {
+    const unsubscribe = MedicalService.subscribeContacts(userProfile.uid, (data) => {
       setContacts(data);
     });
 
@@ -92,7 +86,7 @@ export const MedicalAndFamily: React.FC = () => {
     };
 
     try {
-      await saveMedicalProfile(medData);
+      await MedicalService.saveProfile(medData);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
@@ -114,7 +108,7 @@ export const MedicalAndFamily: React.FC = () => {
     };
 
     try {
-      await saveEmergencyContact(newContact);
+      await MedicalService.saveContact(newContact);
       setIsAddingContact(false);
       setCName('');
       setCPhone('');
@@ -125,7 +119,7 @@ export const MedicalAndFamily: React.FC = () => {
 
   const handleDeleteContact = async (id: string) => {
     try {
-      await deleteEmergencyContact(id);
+      await MedicalService.deleteContact(id);
     } catch (err) {
       console.error('Delete Contact Error:', err);
     }

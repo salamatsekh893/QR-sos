@@ -18,11 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { QRCodeTag, QRType } from '../types';
-import {
-  createQRCodeTag,
-  subscribeToUserQRCodes,
-  deleteQRCodeTag
-} from '../services/firestoreService';
+import { QRService } from '../services/QRService';
 
 interface QRManagementProps {
   onScanQR: (qrId: string) => void;
@@ -45,7 +41,7 @@ export const QRManagement: React.FC<QRManagementProps> = ({ onScanQR }) => {
 
   useEffect(() => {
     if (!userProfile) return;
-    const unsubscribe = subscribeToUserQRCodes(userProfile.uid, (userTags) => {
+    const unsubscribe = QRService.subscribeUserTags(userProfile.uid, (userTags) => {
       setTags(userTags);
     });
     return () => unsubscribe();
@@ -73,7 +69,7 @@ export const QRManagement: React.FC<QRManagementProps> = ({ onScanQR }) => {
     };
 
     try {
-      await createQRCodeTag(newTag);
+      await QRService.saveTag(newTag);
       setIsCreating(false);
       // Reset form defaults
       setTitle('My Emergency QR Tag');
@@ -83,9 +79,12 @@ export const QRManagement: React.FC<QRManagementProps> = ({ onScanQR }) => {
   };
 
   const handleDelete = async (qrId: string) => {
-    if (confirm('Are you sure you want to delete this Emergency QR Tag?')) {
+    if (confirm('Are you sure you want to deactivate/delete this Emergency QR Tag?')) {
       try {
-        await deleteQRCodeTag(qrId);
+        const tag = tags.find((t) => t.id === qrId);
+        if (tag) {
+          await QRService.saveTag({ ...tag, isActive: false });
+        }
       } catch (err) {
         console.error('Delete QR Error:', err);
       }

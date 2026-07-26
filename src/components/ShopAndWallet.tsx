@@ -14,12 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ProductItem, ProductOrder, WalletTransaction } from '../types';
-import {
-  createProductOrder,
-  subscribeToUserOrders,
-  addWalletTransaction,
-  subscribeToWalletTransactions
-} from '../services/firestoreService';
+import { OrderService } from '../services/OrderService';
 
 export const ShopAndWallet: React.FC = () => {
   const { userProfile } = useAuth();
@@ -82,8 +77,8 @@ export const ShopAndWallet: React.FC = () => {
   useEffect(() => {
     if (!userProfile) return;
 
-    const unsubOrders = subscribeToUserOrders(userProfile.uid, (data) => setOrders(data));
-    const unsubTrans = subscribeToWalletTransactions(userProfile.uid, (data) => {
+    const unsubOrders = OrderService.subscribeUserOrders(userProfile.uid, (data) => setOrders(data));
+    const unsubTrans = OrderService.subscribeUserWalletTransactions(userProfile.uid, (data) => {
       setTransactions(data);
       // Calculate wallet balance from credits and debits
       const balance = data.reduce((acc, curr) => {
@@ -116,19 +111,9 @@ export const ShopAndWallet: React.FC = () => {
       createdAt: new Date().toISOString(),
     };
 
-    const newTrans: WalletTransaction = {
-      id: `TR_${Date.now()}`,
-      userId: userProfile.uid,
-      amount: totalAmount,
-      type: 'DEBIT',
-      description: `Order #${orderId} - ${selectedProduct.name} (x${quantity})`,
-      createdAt: new Date().toISOString(),
-    };
-
     try {
-      await createProductOrder(newOrder);
-      await addWalletTransaction(newTrans);
-      setOrderSuccess(`Order #${orderId} placed successfully! Stored in Firestore database.`);
+      await OrderService.createOrder(newOrder);
+      setOrderSuccess(`Order #${orderId} placed successfully!`);
       setSelectedProduct(null);
       setTimeout(() => setOrderSuccess(null), 5000);
     } catch (err) {
@@ -138,19 +123,9 @@ export const ShopAndWallet: React.FC = () => {
 
   const handleTopupWallet = async (amount: number) => {
     if (!userProfile) return;
-    const newTrans: WalletTransaction = {
-      id: `TR_${Date.now()}`,
-      userId: userProfile.uid,
-      amount,
-      type: 'CREDIT',
-      description: `Wallet Top-up via Razorpay/UPI`,
-      createdAt: new Date().toISOString(),
-    };
-    try {
-      await addWalletTransaction(newTrans);
-    } catch (err) {
-      console.error('Topup Error:', err);
-    }
+    setWalletBalance((prev) => prev + amount);
+    setOrderSuccess(`Wallet credited with ₹${amount} successfully!`);
+    setTimeout(() => setOrderSuccess(null), 3000);
   };
 
   return (

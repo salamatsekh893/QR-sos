@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { UserProfile, UserRole } from '../types';
-import { getUserProfile, saveUserProfile } from '../services/firestoreService';
+import { UserService } from '../services/UserService';
 
 interface AuthContextType {
   user: User | null;
@@ -33,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(firebaseUser);
         let profile: UserProfile | null = null;
         try {
-          profile = await getUserProfile(firebaseUser.uid);
+          profile = await UserService.getProfile(firebaseUser.uid);
         } catch (e) {
           console.warn('Error fetching profile, creating fallback:', e);
         }
@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             createdAt: new Date().toISOString(),
           };
           try {
-            await saveUserProfile(profile);
+            await UserService.saveProfile(profile);
           } catch (e) {
             console.warn('Error saving initial profile:', e);
           }
@@ -114,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setUserProfile(profile);
     try {
-      await saveUserProfile(profile);
+      await UserService.saveProfile(profile);
     } catch (e) {
       console.warn('Demo profile save note:', e);
     }
@@ -125,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updated = { ...userProfile, role: newRole };
       setUserProfile(updated);
       try {
-        await saveUserProfile(updated);
+        await UserService.saveProfile(updated);
       } catch (e) {
         console.warn('Role update note:', e);
       }

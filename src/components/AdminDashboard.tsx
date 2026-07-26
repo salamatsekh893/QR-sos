@@ -21,7 +21,7 @@ import {
   Check
 } from 'lucide-react';
 import { SOSAlert, UserRole } from '../types';
-import { subscribeToActiveSOSAlerts, updateSOSAlertStatus } from '../services/firestoreService';
+import { SOSService } from '../services/SOSService';
 import { useAuth } from '../context/AuthContext';
 
 export const AdminDashboard: React.FC = () => {
@@ -32,7 +32,7 @@ export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dispatch' | 'admin' | 'distributor'>('dispatch');
 
   useEffect(() => {
-    const unsub = subscribeToActiveSOSAlerts((data) => setAlerts(data));
+    const unsub = SOSService.subscribeActiveAlerts((data) => setAlerts(data));
     return () => unsub();
   }, []);
 
@@ -49,7 +49,7 @@ export const AdminDashboard: React.FC = () => {
     const unit = prompt('Enter Dispatch Unit / Responder Name:', dispatchUnitName);
     if (!unit) return;
     try {
-      await updateSOSAlertStatus(alertId, 'DISPATCHED', `Dispatched Unit: ${unit}`);
+      await SOSService.updateStatus(alertId, 'DISPATCHED', `Dispatched Unit: ${unit}`);
     } catch (err) {
       console.error('Dispatch error:', err);
     }
@@ -58,7 +58,7 @@ export const AdminDashboard: React.FC = () => {
   const handleResolve = async (alertId: string) => {
     const notes = prompt('Enter Case Resolution Summary / Notes:', 'Victim safely assisted on scene by emergency team.');
     try {
-      await updateSOSAlertStatus(alertId, 'RESOLVED', notes || 'Case closed safely.');
+      await SOSService.updateStatus(alertId, 'RESOLVED', notes || 'Case closed safely.');
     } catch (err) {
       console.error('Resolve error:', err);
     }

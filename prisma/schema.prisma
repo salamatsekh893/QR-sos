@@ -1,0 +1,147 @@
+// SAFE LIFE PLUS - Prisma Schema for MySQL Migration
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  Customer
+  DispatchAdmin
+  Distributor
+}
+
+enum AlertStatus {
+  ACTIVE
+  DISPATCHED
+  RESOLVED
+}
+
+enum Priority {
+  Primary
+  Secondary
+  Guardian
+}
+
+model User {
+  id               String            @id @default(uuid())
+  uid              String            @unique
+  fullName         String
+  email            String            @unique
+  phone            String?
+  bloodGroup       String?
+  city             String?
+  state            String?
+  pincode          String?
+  role             Role              @default(Customer)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  medicalProfile   MedicalProfile?
+  emergencyContacts EmergencyContact[]
+  qrTags           QRCodeTag[]
+  sosAlerts        SOSAlert[]
+  orders           ProductOrder[]
+  walletTransactions WalletTransaction[]
+
+  @@map("users")
+}
+
+model MedicalProfile {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [uid], onDelete: Cascade)
+  bloodGroup         String?
+  allergies          String?  @db.Text
+  chronicDiseases    String?  @db.Text
+  currentMedications String?  @db.Text
+  doctorName         String?
+  doctorPhone        String?
+  hospitalName       String?
+  insurancePolicyNo  String?
+  organDonor         Boolean  @default(true)
+  emergencyNotes     String?  @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("medical_profiles")
+}
+
+model EmergencyContact {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [uid], onDelete: Cascade)
+  name         String
+  relationship String
+  phone        String
+  priority     Priority @default(Primary)
+  createdAt    DateTime @default(now())
+
+  @@map("emergency_contacts")
+}
+
+model QRCodeTag {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [uid], onDelete: Cascade)
+  title          String
+  qrType         String
+  code           String   @unique
+  assignedName   String
+  bloodGroup     String?
+  emergencyPhone String
+  vehicleNo      String?
+  notes          String?  @db.Text
+  isLocked       Boolean  @default(false)
+  scansCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@map("qr_tags")
+}
+
+model SOSAlert {
+  id             String      @id @default(uuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [uid], onDelete: Cascade)
+  userName       String
+  userPhone      String
+  latitude       Float
+  longitude      Float
+  address        String
+  status         AlertStatus @default(ACTIVE)
+  alertType      String
+  batteryLevel   Int?
+  responderNotes String?     @db.Text
+  resolvedAt     DateTime?
+  createdAt      DateTime    @default(now())
+
+  @@map("sos_alerts")
+}
+
+model ProductOrder {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [uid], onDelete: Cascade)
+  productName     String
+  quantity        Int
+  totalAmount     Float
+  status          String
+  shippingAddress String   @db.Text
+  createdAt       DateTime @default(now())
+
+  @@map("product_orders")
+}
+
+model WalletTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [uid], onDelete: Cascade)
+  amount      Float
+  type        String   // CREDIT | DEBIT
+  description String
+  createdAt   DateTime @default(now())
+
+  @@map("wallet_transactions")
+}
